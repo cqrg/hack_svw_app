@@ -268,14 +268,16 @@ java -cp "tools/unidbg-runner/cp.txt内容;tools/unidbg-runner/out" CallVwCrypto
 python tools/vw_crypto_oracle.py
 ```
 
-## 7. 下一步（解锁 dex 后）
+## 7. 下一步（登录后）
 
-1. 用 `tools/frida-dump/` 在真机 dump 真实 dex → jadx 反编译。
-2. 搜 `Retrofit` 接口注解 / `OkHttp` interceptor，提取全部 URL 与请求头。
-3. hook `WhiteBoxKeyServiceImpl` 拿服务端下发的白盒密钥，用 `vw_crypto_oracle.py` 验证。
-4. 抓登录/刷新流程（PUT 刷新 JWT + accessToken），复刻到 `svw_client.py`。
+1. 在模拟器里登录上汽大众账号、绑定车辆（需要用户账号）。
+2. mitmproxy 抓包（或 frida hook OkHttp）拿 VWSDK 车控 HTTP 路径
+   （lockUnlock / startCharging / getVehicleStatusInfo 等对应的 `/svwcar/...` URL）
+   与 MOS PAT 获取/刷新流程。
+3. 用拿到的 token 调通一键控车接口（getValStatus / getACStatus 已具备签名实现）。
+4. hook `WhiteBoxKeyServiceImpl` 拿白盒密钥，用 `vw_crypto_oracle.py` 验证。
 5. 用 `tools/kd_client.p12` + 密码打通 mTLS 网关（若车控走 mTLS 网关）。
-6. 补齐 `custom_components/svw_tracker/` 的 device_tracker 实现。
+6. 补齐 `svw_client.py` 的 remote_command / 登录，完成 `custom_components/svw_tracker/`。
 
 ## 8. 关键坑
 
@@ -285,3 +287,34 @@ python tools/vw_crypto_oracle.py
 - 全局变量地址是 `base + ELF VA`（如 `0x81050`），不是 `base + 0x10050`。
 - 变体跳转表偏移是**带符号 16 位 × 4**：`target = 0x19e4 + (int16)table[xor] * 4`。
 - `AES_cbc_decrypt` 在 0x24e0（0x1ef4 是 ecb_decrypt），hook 别弄错。
+
+## 9. 项目复盘总结（2026-08-12）
+
+### 9.1 复盘结论
+
+1. **最大教训：先确认本机有没有能跑的模拟器，再决定逆向路线。**
+   前期因 `HypervisorPresent=False` 误判"模拟器不可用"，走了 unidbg 逆向 native so 的路
+   （有价值，但没解锁接口）。用户提示后改用 **MuMu 模拟器（不依赖 WHPX）+ frida-dexdump**，
+   一次成功拿到全部 dex —— 从"拿不到接口"到"60+ 接口到手"只差这一步。
+2. **加固 App 的正确打开方式**：SecNeo 加固 ≠ 拿不到；国产模拟器 + root + frida-dexdump
+   浅搜就是最快路径。完整流程已沉淀到 `D:\aigc\gmiot.net-bmw\APK_UNPACKING_GUIDE.md`。
+3. **脱壳后的高效分析**：jadx 反编译 → 按包统计 Retrofit 接口（332 个）→ 接口最多的包
+   = 核心 SDK（一键控车 zonemakerhttp）→ 从 baseUrl → APP_KEY/SECRET → SIGN_KEY → 签名算法
+   逐层挖，一次拿到完整协议。
+4. **动态加载 SDK 是剩余缺口**：VWSDK（com.zone.tsp）未登录不加载，dump 不到；
+   已在内存确认类已加载（有类名字符串但无 dex magic）。需登录后 hook 或直接抓包。
+5. **native 白盒 cipher 不必强求**：so 的 JNI 接口/密钥结构可逆（unidbg 可调用），
+   但自定义 wbox cipher 复现成本高，且密钥由服务端下发 —— 先脱壳/抓包拿密钥，再决定是否复现。
+
+### 9.2 方法论升级点（已同步到 playbook 与 skill）
+
+- 国产模拟器脱壳是第一选择；`HypervisorPresent=False` 不再等于"没模拟器"。
+- 脱壳时机：冷启动后尽早 attach（反调试 SI_TKILL 自杀有延迟）；spawn 模式对强壳可能失败。
+- frida-dexdump 浅搜即可，`-d` 深搜会超时；先 `cd` 到目标目录再跑。
+- 按包统计接口定位核心 SDK；认证链多层（MOS → MOS PAT → TSP）。
+
+### 9.3 数据资产（已入库）
+
+- 59 个 dex / 78MB：`D:\aigc\gmiot.net-bmw\androws\work\dex_dump\上汽大众\`（及 `D:\aigc\gmiot.net\上汽大众\`）
+- jadx 反编译：`D:\aigc\gmiot.net-bmw\svw\decompiled\jadx\`（14827 类）
+- 一键控车协议：`svw/APP_PROTOCOL.md` + `svw/API_REFERENCE.md` + `svw_client.py`
