@@ -65,6 +65,9 @@ data_off=117, data_size=11872   <- 有效 dex 仅 ~12KB（入口/壳类）
 
 - 模拟器：**MuMu Player 15**（`D:\Program Files\Netease\MuMu`，Android 15 / SDK 35 / x86_64）。
   MuMu 用自己的虚拟化引擎，**不依赖 WHPX**（CPU 虚拟化固件已开启 `VirtualizationFirmwareEnabled=True`）。
+- **完整可复现流程**（开 root → frida-server → frida-dexdump → 反调试应对）见
+  `D:\aigc\gmiot.net-bmw\APK_UNPACKING_GUIDE.md`（已同步到
+  `C:\Users\BD-002\.codex\skills\apk-reverse-engineering\APK_UNPACKING_GUIDE.md`）。
 - 开启 root：`MuMuManager.exe setting --vmindex 0 --key root_permission --value true` 后重启，
   并用 `adb root` 让 adbd 以 root 运行。
 - adb：`D:\Program Files\Netease\MuMu\nx_device\15.0\shell\adb.exe`，端口 `127.0.0.1:16384`。
