@@ -1,0 +1,17 @@
+# 大文件与反编译产物不入库
+*.apk
+*.so
+*.dex
+*.p12
+*.jar
+__pycache__/
+*.pyc
+tools/unidbg-runner/out/
+tools/frida-dump/dex_dump/
+decompiled/
+work/
+analysis_nonce/
+
+# 环境/工具
+.venv/
+venv/

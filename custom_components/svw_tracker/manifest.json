@@ -1,0 +1,11 @@
+{
+  "domain": "svw_tracker",
+  "name": "SVW (SAIC-Volkswagen) ID Tracker",
+  "codeowners": ["@you"],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/cqrg/hack_bmw_app",
+  "iot_class": "cloud_polling",
+  "requirements": ["requests"],
+  "version": "0.1.0"
+}
