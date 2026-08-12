@@ -1,6 +1,27 @@
 # 上汽大众超级App - 协议与签名算法
 
-> 状态：native 加密库接口已确认可调用；自定义 cipher 未完全复现；白盒密钥由服务端下发（待脱壳）。
+> 状态：**已脱壳**。一键控车（TSP 场景）SDK 协议已完整；native 加密库可调用；
+> VWSDK 车控核心待登录后抓包补全。
+
+## 0. 一键控车（TSP 场景）请求协议（已完整）
+
+### 0.1 认证/签名
+
+```
+sign = SHA256_HEX_UPPER( signContent + SIGN_KEY )
+signContent = 除 signType、sign 外，请求头按 key 字典序拼接：k1=v1&k2=v2&...
+SIGN_KEY = 973D5F1269759ECF2312D2F0E9C04671
+```
+
+`Authorization: Bearer <accessToken>`；token 由 `exchangetoken/v2` 换取、`refreshtoken/v1` 刷新。
+
+### 0.2 请求头
+
+见 `API_REFERENCE.md` 第 2.2 节。
+
+### 0.3 baseUrl / 密钥
+
+见 `API_REFERENCE.md` 第 2.1 节。
 
 ## 1. 加密库协议
 

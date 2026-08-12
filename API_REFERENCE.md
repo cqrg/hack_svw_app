@@ -1,7 +1,7 @@
 # 上汽大众超级App - API 参考
 
-> 状态：**部分确认**。真实接口路径与请求格式在 SecNeo 加固的 dex 中，待 Frida 脱壳后补全。
-> 本文记录已确认的后端域名、网关行为与头字段。
+> 状态：**脱壳成功，主 App 全量反编译**。一键控车（TSP 场景）SDK 接口/签名已完整；
+> 核心车控（VWSDK com.zone.tsp）需登录后抓包补全。
 
 ## 1. 后端域名（已确认）
 
@@ -21,6 +21,17 @@
 | `audi-proxy-bff-prod.mos.csvw.com` | 要求 mTLS（Audi BFF） |
 | `hu-api-platform.mos.csvw.com` | 要求 mTLS（车机） |
 | `mos-core-live-signature.mos.csvw.com` | 签名服务（当前 DNS 不解析） |
+
+### App 实际使用的 API（脱壳后确认）
+
+| 域名 | 用途 | 来源 |
+| --- | --- | --- |
+| `https://vw-onehitmobilesdk-af.mos.csvw.com/` | **一键控车（TSP 场景）生产 API** | `HttpProxy.configureCloudEnvironment` |
+| `https://acp-es33.z-onesoft.com/` / `https://acp.z-onesoftware.com/` | 一键控车（R 车型/其它） | 同上 |
+| `https://appserver.nokeeu.com/api/` | Ingeek 数字钥匙生产 API | `BaseEnvironmentService` |
+| `https://mweb.mos.csvw.com/` | H5 页面（钥匙分享/续费） | `KDConfig` / `PayCenterUtil` |
+| `https://fawvw.askdwl.com/app` | KDWL 数字钥匙（一汽） | `KeyConstants` |
+| `https://api-c-oneway-uat.mosc.faw-vw.com/vw-digitalkey/api/app` | 一汽数字钥匙 UAT | `KeyConstants` |
 
 ### 网关错误码（黑盒确认）
 
@@ -47,6 +58,34 @@
 - 用途：访问 `proxy-mbb-*` / `audi-proxy-bff-*` / `hu-api-*` 需要该客户端证书。
 - 密码：未知（不在常见密码字典，需从 dex 或运行时提取）。
 
+## 2.1 一键控车（TSP 场景）SDK 配置
+
+```java
+// com.saic.zone.zonemakerhttp.common.Const + HttpProxy
+REMOTE_URL = "https://vw-onehitmobilesdk-af.mos.csvw.com/"   // 生产
+APP_KEY    = "f23b6f2dc6cc47a5bfe3ae102f488826"              // 生产
+APP_SECRET = "5da28ae18d1e43f8a34d8f90d3c01606"              // 生产
+SIGN_KEY   = "973D5F1269759ECF2312D2F0E9C04671"
+SECRET_KEY = "7D5F81A491CC90C2CB8148A1346557A9"
+accountNo  = "acc2025062400270001"                            // ES33 生产
+```
+
+## 2.2 一键控车请求头与签名
+
+```
+version: <appVersion>   deviceId: <deviceId>   timestamp: <ms>   accountNo: acc2025062400270001
+nonce: <uuid>   requestId: <ms>   signType: sha256Hex
+x-device-from: IMAPP   deviceFrom: svwab   x-sdk-version: <sdkVer>
+Authorization: Bearer <accessToken>
+userId: <userId>   vin: <vin>   appKey: <APP_KEY>   clientType: APP
+business: ZMAKER   loginVehicleType: SOA   loginManufacturer: RACAR   manufacturer: RACAR
+clientName: SOA   x-body: <请求体原文>
+sign: SHA256( [除 signType/sign 外，headers 按 key 字典序拼 k=v&k=v...] + SIGN_KEY ) 大写hex
+```
+
+token 流程：`POST /svwcar/ab/dev/auth/authapi/vehuser/exchangetoken/v2`（拿 accessToken/refreshToken）→
+刷新 `refreshtoken/v1`。头里还有 `V_X_CHECK_TOKEN=2.0.0` / `V_X_NOT_CHECK_TOKEN=3.0.0` 版本标记。
+
 ## 3. 认证流程（社区确认 + 壳字符串线索）
 
 ```
@@ -67,6 +106,38 @@
 - `/afcar/car/finder/main`（找车）、`/afcar/digital/key/...`（数字钥匙）
 - `/mycar/MyCarV2Activity`（我的车辆）、`/enrollment/CarVerifyMainActivity`（车辆绑定）
 - `/mos/account/login`、`/mos/order/list`、`/mos/violation/payment`
+
+## 5. 一键控车接口清单（已确认，`/svwcar/ab/...`）
+
+### 车辆状态/功能
+
+| 接口 | 说明 |
+| --- | --- |
+| `/svwcar/ab/vel/vehicle/sdkInit/v1` | SDK 初始化 |
+| `/svwcar/ab/vel/vehicle/featureList/v3` | 车辆功能列表 |
+| `/svwcar/ab/vel/vehicle/svw/getACStatus/v1` | **空调状态** |
+| `/svwcar/ab/vel/vehicle/getValStatus/v1` | 车辆状态 |
+| `/svwcar/ab/vel/vehicle/getOutsideMirrorStatus/v1` | 后视镜状态 |
+| `/svwcar/ab/vel/vehicle/svw/getAddress/v1` | 车辆地址 |
+| `/svwcar/ab/vel/vehicle/svw/getAmbientLamp/v2` | 氛围灯 |
+| `/svwcar/ab/vel/vehicle/svw/getDriverPowerSeat/v1` 等 | 座椅状态 |
+| `/svwcar/ab/vel/vehicle/appInit/v2` | App 初始化 |
+
+### 场景（OneHit 一键）
+
+| 接口 | 说明 |
+| --- | --- |
+| `/svwcar/ab/aoh/sm/user/scene/createScene/v1` / `modifyScene/v2` / `checkSceneNumber/v1` | 场景增改 |
+| `/svwcar/ab/aoh/sm/user/scene/getExecuteNumber` | 执行次数 |
+| `/svwcar/ab/aoh/scene/task/saveVentilationTask` / `getTaskInterval` | 通风任务 |
+| `/svwcar/ab/aoh/sm/scene/share/changeAuthorize/v1` / `shareScene` | 场景分享 |
+
+### 认证
+
+| 接口 | 说明 |
+| --- | --- |
+| `/svwcar/ab/dev/auth/authapi/vehuser/exchangetoken/v2` | exToken（拿 accessToken） |
+| `/racar/dev/auth/authapi/vehuser/refreshtoken/v1` | 刷新 token（BuildConfig 路径，生产可能不同） |
 
 ## 5. 待补全（脱壳后）
 

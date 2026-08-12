@@ -1,9 +1,20 @@
 # 上汽大众超级App（ID.3 车控）逆向笔记
 
 > 目标：从 `com.svw.sc.mos` 提取车控 API 供 Home Assistant 使用（与 gmiot / BMW 同一模式）。
-> 结论先行：**App 使用 SecNeo（梆梆）加固，所有可下载版本均加固，本机无模拟器/真机，
-> 真实 dex（URL / 请求体 / 白盒密钥）暂时无法静态提取。** 但已完成后端域名测绘、
-> native 加密库逆向（可调用）、网关/证书分析，并把解锁路径整理为 `tools/frida-dump/`。
+> **重大进展（2026-08-12）：电脑上的 MuMu 模拟器（Android 15）可跑，已成功 Frida 脱壳，
+> 拿到全部真实 dex 并完整反编译！** 主业务类、一键控车（TSP 场景）SDK、数字钥匙 SDK
+> 均已逆向；唯一剩余：VWSDK 车控核心库（com.zone.tsp）为动态加载，需登录后才出现。
+
+## 0. 结论速览（更新版）
+
+| 项目 | 状态 |
+| --- | --- |
+| 脱壳 | ✅ MuMu 模拟器 + frida-dexdump，59 个 dex / 78MB，jadx 反编译 14827 类 |
+| 主业务类 | ✅ com.svw.sc.mos.* 全量（VehicleControlApi / ChargeApi / TokenInterceptor 等） |
+| 一键控车 SDK | ✅ `com.saic.zone.zonemakerhttp`：baseUrl / APP_KEY/SECRET / 接口 / 签名算法全拿到 |
+| 数字钥匙 SDK | ✅ `com.ingeek.*`（appserver.nokeeu.com）+ `com.kdwl.*`（askdwl.com） |
+| VWSDK（com.zone.tsp） | ⚠️ 已确认加载（内存有类），但 dex 动态加载，未登录不出现 → 需登录后 hook 或抓包 |
+| 登录/车控打通 | ⚠️ 需要用户账号登录模拟器后抓包验证 |
 
 ## 1. 样本与识别
 
@@ -49,6 +60,31 @@ data_off=117, data_size=11872   <- 有效 dex 仅 ~12KB（入口/壳类）
 | 本机模拟器 + Frida dump | ❌ | **本机无 Hypervisor（`HypervisorPresent=False`）**，x86_64 镜像需 WHPX/AEHD（需管理员+重启），ARM 镜像被拒 |
 | 真机 + Frida | ✅ 推荐 | 见 `tools/frida-dump/`，几分钟可完成 |
 | 静态逆向 libDexHelper 解密 | ⚠️ 成本极高 | 混淆+字符串加密，无公开工具匹配该版本 |
+
+### 2.1 模拟器脱壳实录（成功）
+
+- 模拟器：**MuMu Player 15**（`D:\Program Files\Netease\MuMu`，Android 15 / SDK 35 / x86_64）。
+  MuMu 用自己的虚拟化引擎，**不依赖 WHPX**（CPU 虚拟化固件已开启 `VirtualizationFirmwareEnabled=True`）。
+- 开启 root：`MuMuManager.exe setting --vmindex 0 --key root_permission --value true` 后重启，
+  并用 `adb root` 让 adbd 以 root 运行。
+- adb：`D:\Program Files\Netease\MuMu\nx_device\15.0\shell\adb.exe`，端口 `127.0.0.1:16384`。
+- frida-server：17.17.0 android-x86_64（经 `ghfast.top` 镜像下载），push 到 `/data/local/tmp/` 以 root 运行。
+- dump：`python -m frida_dexdump -U -p <pid>`（**浅搜模式**即可，深搜会超时）。
+  - 冷启动后 App 停在隐私页/主界面早期时 attach 成功率最高（反调试 `tgkill` 自杀只在特定时机触发）。
+  - 反调试证据：frida 附加后 `Fatal signal 11 (SIGSEGV), code -6 (SI_TKILL)` = SecNeo 检测到注入后自杀。
+- 输出：`D:\aigc\gmiot.net-bmw\androws\work\dex_dump\上汽大众\classes1-57.dex`
+  与 `D:\aigc\gmiot.net\上汽大众\classes1-59.dex`（第二次多 2 个）。
+- 反编译：jadx（`bmw/tools/jadx`）→ `svw/decompiled/jadx/`（14827 类）。
+
+### 2.2 VWSDK（com.zone.tsp）未在 dump 中
+
+- `classes19.dex` 引用了 46 个 `com.zone.tsp.*` 类型，但**类定义不在任何已 dump 的 dex**；
+  APK 静态文件（assets/apktool 解包）中也无 VWSDK 的 dex/jar。
+- 用 frida 扫内存确认：App 运行后 `com/zone/tsp/sdk/VWSDK` 字符串大量存在（已加载），
+  但所在映射内**没有 dex magic**（原始 dex 缓冲已被 ART 处理/释放）。
+- 结论：VWSDK 是**动态加载的独立 SDK**，未登录（App 停在"虚拟车控"）时不加载其 dex；
+  需**登录并进入车控页**后，hook `InMemoryDexClassLoader`/`DexClassLoader` 在加载瞬间 dump，
+  或直接抓包（mitmproxy）看车控请求。
 
 ## 3. 后端域名测绘（已完成）
 
@@ -177,6 +213,34 @@ key[0]   key[1]      key[2]      key[3]    key[4..]
 一汽大众同族 App（com.dssomobile.oneApp）的 HA 方案使用
 `oneapp-api.faw-vw.com/mycar/car-networking/...`（bbs.hassbian 帖），上汽大众后端不同
 （`*.mos.csvw.com`），但 MBB 框架结构可能相似。
+
+## 5.1 一键控车（TSP 场景）SDK 逆向（已完整）
+
+`com.saic.zone.zonemakerhttp`（OneHit 一键控车 SDK，`classes16.dex`）：
+
+- **生产 baseUrl**：`https://vw-onehitmobilesdk-af.mos.csvw.com/`（`HttpProxy.configureCloudEnvironment`）
+- **APP_KEY / APP_SECRET**（生产）：`f23b6f2dc6cc47a5bfe3ae102f488826` / `5da28ae18d1e43f8a34d8f90d3c01606`
+- **SIGN_KEY**：`973D5F1269759ECF2312D2F0E9C04671`（请求签名密钥）
+- **SECRET_KEY**：`7D5F81A491CC90C2CB8148A1346557A9`
+- **accountNo**：`acc2025062400270001`（ES33）/ `acc2022102200140001`（SOA）
+- **接口前缀**：`/svwcar/ab/...`（见 `API_REFERENCE.md` 第 5 节清单）
+- **token 流程**：`/svwcar/ab/dev/auth/authapi/vehuser/exchangetoken/v2`（exToken）
+  + `/racar/dev/auth/authapi/vehuser/refreshtoken/v1`（BuildConfig 中的测试路径）
+- **请求头**：`version / deviceId / timestamp / accountNo / nonce / requestId / signType=sha256Hex /
+  x-device-from / deviceFrom=svwab / Authorization: Bearer <accessToken> / userId / vin / appKey /
+  clientType=APP / business=ZMAKER / loginVehicleType=SOA / loginManufacturer=RACAR / x-body=<body原文>`
+- **签名算法**：`sign = SHA256_HEX_UPPER( getSignContent(headers) + SIGN_KEY )`，
+  其中 `getSignContent` = 除 `signType/sign` 外的 header 按 key 字典序拼 `k=v&k=v...`。
+  另有 `getAuthorization`（HMAC-SHA256 + Base64，网关授权用，未确认启用）。
+
+## 5.2 车控认证链（abvehiclesdk）
+
+`com.svw.sc.mos.abvehiclesdk`（薄封装，走 VWSDK）：
+
+- 登录 TSP：`VehicleConnectionSDKLoginHelper` / `SceneModeSDKLoginHelper`
+  → `VWSDK` 通过 `injectHostApiCommonCallbackImpl` 的 `getMosPat()` 回调拿 **MOS PAT**
+  （`MosPatRefreshHelper.getMosPat`）；PAT 过期时 `refreshMosPat` 自动刷新。
+- 车辆状态轮询：`VehicleStatusPollManager`；命令执行：`VehicleControlApi`（postXxxCommand）。
 
 ## 6. 已完成的工具
 
