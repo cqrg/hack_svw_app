@@ -32,6 +32,15 @@
 
 `x-app-id` 的正确值在真实 dex 中（猜测为数字 ID）。
 
+### Web 门户（补充探测）
+
+| 域名 | 说明 |
+| --- | --- |
+| `connectivity.svw-volkswagen.com` | 智慧车联官方介绍页（营销页，无 Web 远程控车） |
+| `pass.svw-volkswagen.com/login` | SVW 统一 SSO 登录（UC/商城共用），可能与 App 登录同源 |
+| `uc.svw-volkswagen.com` | 二手车/用户中心，页面 JS 里出现 `myVehicles` / `defaultCar` 数据字段 |
+| `connectivity.saicskoda.com.cn` | 斯柯达同族门户（仅介绍页） |
+
 ## 2. mTLS 客户端证书
 
 - 文件：`res/raw/kd_client.p12`（已复制到 `tools/kd_client.p12`，2594 字节）。
