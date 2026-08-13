@@ -3,7 +3,11 @@
 与 [bmw/](../bmw/) 同模式的项目。目标：把 `com.svw.sc.mos`（上汽大众超级App，
 ID.3 车控）的私有 API 逆向出来，供 Home Assistant 使用。
 
-## 当前状态（已脱壳）
+> 最新进度（2026-08-12）：模拟器脱壳成功（59 dex / 78MB / 14827 类），主 App 与一键控车
+> SDK 全部反编译，一键控车签名已实现（`svw_client.py`）；VWSDK 车控核心（`com.zone.tsp`）
+> 为动态加载，待登录账号后抓包 / hook 补全。
+
+## 当前状态（2026-08-12，已脱壳）
 
 | 模块 | 状态 |
 | --- | --- |
@@ -13,9 +17,9 @@ ID.3 车控）的私有 API 逆向出来，供 Home Assistant 使用。
 | 主业务反编译 | ✅ com.svw.sc.mos.*（VehicleControlApi / ChargeApi / TokenInterceptor 等） |
 | 一键控车 SDK | ✅ baseUrl / APP_KEY/SECRET / 接口 / **签名算法**（`svw_client.py` 已实现） |
 | 数字钥匙 SDK | ✅ ingeek(nokeeu.com) + kdwl(askdwl.com) |
-| VWSDK 车控核心 | ⚠️ com.zone.tsp 动态加载，未登录不出现 → **需登录后抓包/hook** |
+| VWSDK 车控核心 | ⏳ com.zone.tsp 动态加载，未登录不出现 → **需登录后抓包 / hook** |
 | native 加密库 | ✅ JNI 接口/密钥结构/init 校验已逆向，unidbg 可调用（`tools/vw_crypto_oracle.py`） |
-| 登录/车控 API 打通 | ⚠️ 需用户账号登录模拟器后抓包验证 |
+| 登录/车控 API 打通 | ⏳ 需用户账号登录模拟器后抓包验证 |
 
 **一句话：** 模拟器脱壳已成功，主 App 与一键控车 SDK 全部反编译到手；
 只差 VWSDK 车控核心（锁车/空调/充电）——它需要登录账号后才加载，登录后抓包即可补全。
