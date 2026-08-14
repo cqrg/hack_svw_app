@@ -74,3 +74,41 @@ python svw_client.py
 3. 补全 `svw_client.py` 的 `remote_command` / 登录 / 车辆列表。
 4. 完成 `custom_components/svw_tracker/` 的 HA 集成。
 
+
+
+## Home Assistant 集成（svw_tracker）
+
+> 已完成（2026-08-14）：位置追踪 + 传感器（电量/续航/空调/车门）+ 空调开/关按钮。
+> token 有效期 2 小时，过期需重新抓取（见 REVERSE_NOTES）。
+
+### 安装
+
+```powershell
+# 将 custom_components/svw_tracker/ 复制到 HA 的 custom_components/ 下
+Copy-Item -Recurse custom_components\svw_tracker <ha_config>/custom_components/
+```
+
+### 配置（configuration.yaml）
+
+```yaml
+device_tracker:
+  - platform: svw_tracker
+    name: "ID.3"                       # 可选，默认 SVW ID.3
+    user_id: "2166661271071268864"
+    vin: "LSVFB6E93P2082137"
+    auth_jwt: "Bearer eyJ..."          # Authorization（2h 过期）
+    cop_token: "zBCZKXP..."            # X-COP-accessToken
+    device_id: "vwa0a1b298a1598603"
+    did: "VW_APP_23117RK66C_51c26dffc16c41dcb22954f3de72ab7c_15_5.0.5"
+```
+
+### 实体
+
+| 实体 | 类型 | 说明 |
+| --- | --- | --- |
+| `device_tracker.svw_id3_location` | 位置 | GPS 经纬度 |
+| `sensor.svw_id3_电量` | 电量 % | 含续航/充电状态 |
+| `sensor.svw_id3_空调` | 状态 | on/off + 剩余时间 |
+| `sensor.svw_id3_车门` | 状态 | safe + 车门/车窗明细 |
+| `button.svw_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+
