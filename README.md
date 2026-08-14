@@ -90,17 +90,21 @@ Copy-Item -Recurse custom_components\svw_tracker <ha_config>/custom_components/
 
 ### 配置（configuration.yaml）
 
+**可直接粘贴（2026-08-14 实测有效）**：
+
 ```yaml
 device_tracker:
   - platform: svw_tracker
-    name: "ID.3"                       # 可选，默认 SVW ID.3
+    name: "ID.3"                              # 可选，默认 SVW ID.3
     user_id: "2166661271071268864"
     vin: "LSVFB6E93P2082137"
-    auth_jwt: "Bearer eyJ..."          # Authorization（2h 过期）
-    cop_token: "zBCZKXP..."            # X-COP-accessToken
+    auth_jwt: "Bearer eyJraWQiOiI4OTY0NTMwOTYyMDkwNzcxNzEzIiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJzc29pZCI6IjEwMmM0OGZjLTRiYzUtNDVkNS1iNTk4LWU1YmZlNmRmMjllNCIsInNjcCI6WyJvcGVuaWQiXSwic3ViIjoiMjE2NjY2MTI3MTA3MTI2ODg2NCIsInZlciI6IjEuMCIsImlzcyI6Im1vcy5jc3Z3LmNvbSIsImNjaCI6ImFwcCIsInR5cCI6IkFUIiwiaWR0LWlkIjoiYzYwN2NjNGQtMGIwZS00ZGZhLWJjNDQtMjU1ZWUwYWE0ZmQyIiwiaG9zIjoiVlciLCJyb2wiOiJQUklNQVJZX1VTRVIiLCJzdHlwIjoiVDMiLCJhdWQiOiJ3d3cuc3Z3LmNvbS5jbiIsInZpbiI6IkxTVkZCNkU5M1AyMDgyMTM3IiwidG50IjoidnciLCJleHAiOjE3ODY2OTczOTcsImlhdCI6MTc4NjY5MDE5NywicnQtaWQiOiI3YmI0YmEzNi05MmYxLTQ1NjQtYmYwZC1kMGYzNzhhZTc1NTciLCJsY3MiOltdLCJqdGkiOiIyOGUyNzljNS1jNzgzLTQ1NzEtYjE2Yy00NmU5OTk5OTIzNTYifQ.JJ_ieEm3bKB50e7YOQlpu48E-mZ9YEuu1GpYrxjH8p6f2qcTmy5KTZE8QDgBf-MWzmqpNoJvQN-JEuUkMddOuA"
+    cop_token: "mVgQ8toCS3IAF82dU_7SW7SDLQZBMy9e"
     device_id: "vwa0a1b298a1598603"
     did: "VW_APP_23117RK66C_51c26dffc16c41dcb22954f3de72ab7c_15_5.0.5"
 ```
+
+> token 实测服务端不严格校验（JWT exp 过期仍 200、历史 X-COP 均有效），一次配置可长期使用；若将来失效，重新抓取（见 REVERSE_NOTES）。
 
 ### 实体
 
@@ -111,5 +115,6 @@ device_tracker:
 | `sensor.svw_id3_空调` | 状态 | on/off + 剩余时间 |
 | `sensor.svw_id3_车门` | 状态 | safe + 车门/车窗明细 |
 | `button.svw_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+
 
 
