@@ -351,3 +351,15 @@ python tools/vw_crypto_oracle.py
 4. 数字钥匙 SDK（混淆类 `a/a/a/c/b/*`）引用 `android.bluetooth.BluetoothGatt/BluetoothLeScanner/BluetoothLeAdvertiser` → **BLE 方案**（Ingect nokeeu.com / KDWL askdwl.com）。
 
 结论：远程（蜂窝）解锁因安全策略禁用；解锁需手机蓝牙数字钥匙在车旁（BLE/UWB）。HA 无法做远程解锁；远程可用功能 = 车况查询 + 空调控制（已在 svw_tracker 集成）。
+
+
+## token 生命周期实测（2026-08-14）
+
+**结论**：JWT（Authorization）与 X-COP-accessToken **服务端不严格校验**，一次抓取可用很久。
+
+实测：
+- JWT `exp` = iat+7200（2h），但**过期后旧 JWT 调 API 仍返回 200**（不校验 exp 或容忍）。
+- X-COP-accessToken 在 App 内会自动刷新（实测 zBCZKXP0→mVgQ8toCS3I），但**三个历史 token（跨 1.5h + 改系统时间 2h）全部有效**。
+- 改系统时间 +2h 触发 App 自动刷新成功（请求全部 200），但 refresh 请求**不走 OkHttp**（hook RealInterceptorChain/DataInterceptor 抓不到），未捕获 refresh 接口。
+
+**对 HA 集成**：token 一次配置即可长期使用；即使将来真过期，重新登录/抓一次即可。HA 客户端无需复杂自动刷新逻辑。

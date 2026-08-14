@@ -79,7 +79,7 @@ python svw_client.py
 ## Home Assistant 集成（svw_tracker）
 
 > 已完成（2026-08-14）：位置追踪 + 传感器（电量/续航/空调/车门）+ 空调开/关按钮。
-> token 有效期 2 小时，过期需重新抓取（见 REVERSE_NOTES）。
+> token 实测服务端不严格校验（JWT exp 过期仍 200，三个历史 X-COP 均有效），一次配置可长期使用；若过期重新抓取即可（见 REVERSE_NOTES）。
 
 ### 安装
 
@@ -111,4 +111,5 @@ device_tracker:
 | `sensor.svw_id3_空调` | 状态 | on/off + 剩余时间 |
 | `sensor.svw_id3_车门` | 状态 | safe + 车门/车窗明细 |
 | `button.svw_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+
 
