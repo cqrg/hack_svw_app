@@ -4,9 +4,10 @@
   "codeowners": ["@cqrg"],
   "config_flow": false,
   "dependencies": [],
-  "documentation": "https://github.com/cqrg/hack_svw_app",
+  "documentation": "https://github.com/cqrg/hack_id3_app",
   "iot_class": "cloud_polling",
   "requirements": ["requests"],
   "version": "0.2.0"
 }
+
 

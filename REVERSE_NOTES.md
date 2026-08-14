@@ -363,3 +363,4 @@ python tools/vw_crypto_oracle.py
 - 改系统时间 +2h 触发 App 自动刷新成功（请求全部 200），但 refresh 请求**不走 OkHttp**（hook RealInterceptorChain/DataInterceptor 抓不到），未捕获 refresh 接口。
 
 **对 HA 集成**：token 一次配置即可长期使用；即使将来真过期，重新登录/抓一次即可。HA 客户端无需复杂自动刷新逻辑。
+
