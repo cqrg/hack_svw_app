@@ -1,11 +1,11 @@
-# 上汽大众超级App（ID.3）逆向 → HA 集成
+﻿# 上汽大众超级App（ID.3）逆向 → HA 集成
 
 与 [bmw/](../bmw/) 同模式的项目。目标：把 `com.svw.sc.mos`（上汽大众超级App，
 ID.3 车控）的私有 API 逆向出来，供 Home Assistant 使用。
 
-> 最新进度（2026-08-12）：模拟器脱壳成功（59 dex / 78MB / 14827 类），主 App 与一键控车
-> SDK 全部反编译，一键控车签名已实现（`svw_client.py`）；VWSDK 车控核心（`com.zone.tsp`）
-> 为动态加载，待登录账号后抓包 / hook 补全。
+> 最新进度（2026-08-14）：**登录验证成功**（账号 bf30c486a87c47f8 + 短信验证码），
+> 实测车况/车控走 **MOS API（api.mos.csvw.com/mos/...）**，`svw_mos_client.py` 已打通
+> 车况查询 + 空调控制。HA 集成待做。
 
 ## 当前状态（2026-08-12，已脱壳）
 
@@ -17,9 +17,11 @@ ID.3 车控）的私有 API 逆向出来，供 Home Assistant 使用。
 | 主业务反编译 | ✅ com.svw.sc.mos.*（VehicleControlApi / ChargeApi / TokenInterceptor 等） |
 | 一键控车 SDK | ✅ baseUrl / APP_KEY/SECRET / 接口 / **签名算法**（`svw_client.py` 已实现） |
 | 数字钥匙 SDK | ✅ ingeek(nokeeu.com) + kdwl(askdwl.com) |
-| VWSDK 车控核心 | ⏳ com.zone.tsp 动态加载，未登录不出现 → **需登录后抓包 / hook** |
+| VWSDK 车控核心 | ✅ **实测走 MOS API（api.mos.csvw.com/mos/...）**，无需 VWSDK；`svw_mos_client.py` 车况查询+空调控制已打通 |
 | native 加密库 | ✅ JNI 接口/密钥结构/init 校验已逆向，unidbg 可调用（`tools/vw_crypto_oracle.py`） |
-| 登录/车控 API 打通 | ⏳ 需用户账号登录模拟器后抓包验证 |
+| 登录验证 | ✅ 密码登录 + 短信验证码（2026-08-14） |
+| 车况/车控 API | ✅ 空调/充电/车门/位置查询 + 空调开/关控制全部实测 |
+| HA 集成 | ⏳ 待做 |
 
 **一句话：** 模拟器脱壳已成功，主 App 与一键控车 SDK 全部反编译到手；
 只差 VWSDK 车控核心（锁车/空调/充电）——它需要登录账号后才加载，登录后抓包即可补全。
@@ -71,3 +73,4 @@ python svw_client.py
 2. mitmproxy 抓包（或 frida hook OkHttp）拿 VWSDK 车控接口 + MOS PAT 获取流程。
 3. 补全 `svw_client.py` 的 `remote_command` / 登录 / 车辆列表。
 4. 完成 `custom_components/svw_tracker/` 的 HA 集成。
+

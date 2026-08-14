@@ -1,4 +1,4 @@
-# 上汽大众超级App（ID.3 车控）逆向笔记
+﻿# 上汽大众超级App（ID.3 车控）逆向笔记
 
 > 目标：从 `com.svw.sc.mos` 提取车控 API 供 Home Assistant 使用（与 gmiot / BMW 同一模式）。
 > **重大进展（2026-08-12）：电脑上的 MuMu 模拟器（Android 15）可跑，已成功 Frida 脱壳，
@@ -318,3 +318,23 @@ python tools/vw_crypto_oracle.py
 - 59 个 dex / 78MB：`D:\aigc\gmiot.net-bmw\androws\work\dex_dump\上汽大众\`（及 `D:\aigc\gmiot.net\上汽大众\`）
 - jadx 反编译：`D:\aigc\gmiot.net-bmw\svw\decompiled\jadx\`（14827 类）
 - 一键控车协议：`svw/APP_PROTOCOL.md` + `svw/API_REFERENCE.md` + `svw_client.py`
+
+
+## 登录验证与 MOS API 打通（2026-08-14 实测）
+
+### 登录流程（模拟器 MuMu + frida hook OkHttp 抓包）
+1. 密码登录 `POST /mos/security/api/v1/app/actions/pwdlogin`，body：`{"brand":"vw","deviceId":"VW_APP_...","deviceType":"android","mobile":"<账号>","picContent":"","picTicket":"","pwd":"<密码>","scope":"openid"}` → `510073 请您使用验证码登录`（新设备需短信验证）。
+2. 发验证码 `POST /mos/security/api/v1/smsCode/getSmsCode/loginAndRegister` body：`mobile=<手机号>&type=login&brand=vw` → `000000 success`。
+3. App 内输入验证码 → 登录成功（UI 显示昵称"万奕"）。
+
+### 关键发现
+- **实际车况/车控走 `api.mos.csvw.com/mos/...`（MOS API）**，不是之前逆向的一键控车 SDK（vw-onehitmobilesdk-af.mos.csvw.com）或 VWSDK（com.zone.tsp）——之前"VWSDK 动态加载待登录"的卡点实际被 MOS API 绕过。
+- 认证：`Authorization: Bearer <JWT ES256 2h>` + `X-COP-accessToken`（会刷新）+ Did/deviceId/Timestamp/Nonce/TraceId。
+- 车况查询 + 空调控制全部实测：`svw_mos_client.py` 独立 Python 客户端可查空调/充电/车门/位置、可发空调开/关（requestId 轮询确认）。
+- 门锁/车窗控制接口未抓（UI 未找到入口，可从 access-lights/actions 模式推断）。
+- 遗留：X-COP-accessToken 刷新机制、refreshToken（JWT rt-id）刷新接口、门锁控制、HA 集成未做。
+
+### 抓包要点（frida 17）
+- 必须手动加载 `frida_tools/bridges/java.js` + `Object.defineProperty(globalThis,'Java',{value:bridge})`。
+- `okhttp3.OkHttpClient.newCall` 的 request **headers 为空**（token 由拦截器后加）→ 要在 `RealInterceptorChain.proceed` 里打印 `req.headers()`。
+- `Headers.toString()` 对 `Authorization` 掩码成 `██` → 用 `req.header("Authorization")` 取真实值。

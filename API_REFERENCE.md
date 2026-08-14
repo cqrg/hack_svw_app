@@ -1,8 +1,61 @@
-# 上汽大众超级App - API 参考
+﻿# 上汽大众超级App - API 参考
 
 > 状态：**脱壳成功，主 App 全量反编译**。一键控车（TSP 场景）SDK 接口/签名已完整；
 > 核心车控（VWSDK com.zone.tsp）需登录后抓包补全。
 
+## 0. MOS API（登录后实测打通，2026-08-14）
+
+> 登录验证成功（账号 bf30c486a87c47f8 密码登录 + 短信验证码 459139）。
+> **实际车况/车控走 `api.mos.csvw.com/mos/...`，不是之前逆向的一键控车 SDK（vw-onehitmobilesdk）**。
+> 客户端：`svw_mos_client.py`（已实测：车况查询 + 空调控制全通）。
+
+### 0.1 认证
+
+```
+Authorization: Bearer <JWT ES256，2 小时有效>
+X-COP-accessToken: <COP 平台 token，会刷新（登录后约 10 分钟变化）>
+Did: VW_APP_23117RK66C_51c26dffc16c41dcb22954f3de72ab7c_15_5.0.5
+deviceId: vwa0a1b298a1598603
+Timestamp: <ms>   Nonce: <uuid>   TraceId: <uuid>_<userId>_<Did>_<ts>
+X-Brand: VW   OS: Android   Accept-Language: zh
+User-Agent: okhttp/4.12.0
+```
+
+JWT payload：`sub=userId, vin, typ=AT, exp=iat+7200, rt-id=<refreshTokenId>, iss=mos.csvw.com, host=VW, role=PRIMARY_USER, styp=T3`。
+
+### 0.2 关键参数（实测）
+
+| 参数 | 值 |
+| --- | --- |
+| userId | `2166661271071268864` |
+| VIN | `LSVFB6E93P2082137`（ID.3，车牌 川QDE8699） |
+| deviceId | `vwa0a1b298a1598603` |
+| DID | `VW_APP_23117RK66C_51c26dffc16c41dcb22954f3de72ab7c_15_5.0.5` |
+
+### 0.3 接口清单（实测）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/mos/security/api/v1/app/actions/pwdlogin` | 密码登录（510073=需短信验证码） |
+| POST | `/mos/security/api/v1/smsCode/getSmsCode/loginAndRegister` | 发验证码（body: `mobile=&type=login&brand=vw`） |
+| GET | `/mos/rcs/api/v2/users/{uid}/vehicles/{vin}/climatisation/status` | 空调状态 |
+| GET | `/mos/rcs/api/v2/users/{uid}/vehicles/{vin}/charging/status` | 充电/电量/续航 |
+| GET | `/mos/rcs/api/v1/users/{uid}/vehicles/{vin}/access-lights/status` | 车门/车窗/车灯/后备箱 |
+| GET | `/mos/vdis/api/v1/users/{uid}/vehicles/{vin}/location/latest` | 车辆位置（经纬度） |
+| GET | `/mos/user/api/v5/customer/userInfo?userId={uid}&vin={vin}` | 用户/车辆信息 |
+| POST | `/mos/rcs/api/v1/users/{uid}/vehicles/{vin}/climatisation/actions/start` | 空调开（body 见下） |
+| POST | `/mos/rcs/api/v1/users/{uid}/vehicles/{vin}/climatisation/actions/stop` | 空调关 |
+| GET | `/mos/rcs/api/v1/users/{uid}/vehicles/{vin}/requests/{requestId}` | 命令状态轮询（in_progress→successful 556026） |
+
+空调 start body：
+```json
+{"climatisationWithoutExternalPower":true,"targetTemperatureC":"15.5","windowHeatingEnabled":false,
+ "zoneFrontLeftEnabled":false,"zoneFrontRightEnabled":false,"zoneRearLeftEnabled":false,"zoneRearRightEnabled":false}
+```
+
+### 0.4 命令执行模式
+
+控制命令（actions/start|stop）→ 响应返回 `requestId` → 轮询 `requests/{requestId}` 直到 `status=successful`（code 556026）。约 2-30 秒完成。
 ## 1. 后端域名（已确认）
 
 ### 静态资源
@@ -146,3 +199,4 @@ token 流程：`POST /svwcar/ab/dev/auth/authapi/vehuser/exchangetoken/v2`（拿
 - [ ] 白盒密钥获取接口（`WhiteBoxKeyServiceImpl`）
 - [ ] JWT 刷新地址（PUT）
 - [ ] mTLS 证书密码
+
