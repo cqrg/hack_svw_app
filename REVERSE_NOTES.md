@@ -338,3 +338,16 @@ python tools/vw_crypto_oracle.py
 - 必须手动加载 `frida_tools/bridges/java.js` + `Object.defineProperty(globalThis,'Java',{value:bridge})`。
 - `okhttp3.OkHttpClient.newCall` 的 request **headers 为空**（token 由拦截器后加）→ 要在 `RealInterceptorChain.proceed` 里打印 `req.headers()`。
 - `Headers.toString()` 对 `Authorization` 掩码成 `██` → 用 `req.header("Authorization")` 取真实值。
+
+
+## 门锁控制结论：远程解锁不可用（蓝牙数字钥匙）
+
+**结论（2026-08-14）**：ID.3 的解锁是**蓝牙（数字钥匙 BLE）**控制的，**远程蜂窝解锁不存在**。
+
+证据链：
+1. App UI 无锁车/解锁按钮（爱车页/详情页/车辆卡片全找遍）。
+2. frida 全量抓包（OkHttp）无任何 lock/unlock 请求，只有车况查询 + 空调控制。
+3. dex 反编译搜 `@GET/@POST` 注解，无 lock/unlock/door 路径。
+4. 数字钥匙 SDK（混淆类 `a/a/a/c/b/*`）引用 `android.bluetooth.BluetoothGatt/BluetoothLeScanner/BluetoothLeAdvertiser` → **BLE 方案**（Ingect nokeeu.com / KDWL askdwl.com）。
+
+结论：远程（蜂窝）解锁因安全策略禁用；解锁需手机蓝牙数字钥匙在车旁（BLE/UWB）。HA 无法做远程解锁；远程可用功能 = 车况查询 + 空调控制（已在 svw_tracker 集成）。
