@@ -1,15 +1,15 @@
-﻿"""SVW MOS API client for Home Assistant."""
+﻿"""VW ID.3 MOS API client for Home Assistant."""
 import time, uuid
 import requests
 
 BASE = "https://api.mos.csvw.com"
 
 
-class SVWError(Exception):
+class ID3Error(Exception):
     pass
 
 
-class SVWMosClient:
+class ID3Client:
     def __init__(self, user_id, vin, auth_jwt, cop_token, device_id, did):
         self.user_id = user_id
         self.vin = vin
@@ -49,7 +49,7 @@ class SVWMosClient:
 
     def _check(self, data):
         if data.get("code") != "000000":
-            raise SVWError(f"API error {data.get('code')}: {data.get('description')}")
+            raise ID3Error(f"API error {data.get('code')}: {data.get('description')}")
         return data.get("data")
 
     # ---- 车况查询 ----
@@ -93,3 +93,4 @@ class SVWMosClient:
 
     def climatisation_stop(self):
         return self._check(self._post(f"/mos/rcs/api/v1/users/{self.user_id}/vehicles/{self.vin}/climatisation/actions/stop", {}))
+

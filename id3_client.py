@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""SVW (上汽大众 ID.3) MOS API client - from live capture 2026-08-14."""
+"""VW ID.3 (上汽大众) MOS API client - from live capture 2026-08-14."""
 import requests, time, uuid, json
 
 BASE = "https://api.mos.csvw.com"
@@ -14,7 +14,7 @@ AUTH_JWT = ("Bearer eyJraWQiOiI4OTY0NTMwOTYyMDkwNzcxNzEzIiwidHlwIjoiSldUIiwiYWxn
             "JJ_ieEm3bKB50e7YOQlpu48E-mZ9YEuu1GpYrxjH8p6f2qcTmy5KTZE8QDgBf-MWzmqpNoJvQN-JEuUkMddOuA")
 
 
-class SVWMosClient:
+class ID3Client:
     def __init__(self, user_id=USER_ID, vin=VIN, auth_jwt=AUTH_JWT, cop_token=COP_ACCESS_TOKEN,
                  device_id=DEVICE_ID, did=DID):
         self.user_id = user_id
@@ -86,7 +86,7 @@ class SVWMosClient:
 
 if __name__ == "__main__":
     import sys
-    c = SVWMosClient()
+    c = ID3Client()
     if len(sys.argv) > 1 and sys.argv[1] == "ac-start":
         r = c.climatisation_start()
         print("AC start:", json.dumps(r, ensure_ascii=False)[:300])
@@ -105,3 +105,4 @@ if __name__ == "__main__":
                 print(json.dumps(d, ensure_ascii=False)[:350])
             except Exception as e:
                 print(f"{name} ERR: {e}")
+

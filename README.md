@@ -35,7 +35,7 @@ svw/
 ├── APP_PROTOCOL.md             # 加密库协议、密钥结构、认证流程
 ├── svw_client.py               # 客户端骨架（TODO 标注待补全处）
 ├── custom_components/
-│   └── svw_tracker/            # HA 集成骨架
+│   └── id3_tracker/            # HA 集成骨架
 └── tools/
     ├── unidbg-runner/          # unidbg 调用真实 so（CallVwCryptoTool / DbgVwCrypto）
     ├── vw_crypto_oracle.py     # Python 封装：加解密 oracle
@@ -72,11 +72,11 @@ python svw_client.py
 1. 在上汽大众超级App 模拟器里登录账号、绑定车辆。
 2. mitmproxy 抓包（或 frida hook OkHttp）拿 VWSDK 车控接口 + MOS PAT 获取流程。
 3. 补全 `svw_client.py` 的 `remote_command` / 登录 / 车辆列表。
-4. 完成 `custom_components/svw_tracker/` 的 HA 集成。
+4. 完成 `custom_components/id3_tracker/` 的 HA 集成。
 
 
 
-## Home Assistant 集成（svw_tracker）
+## Home Assistant 集成（id3_tracker）
 
 > 已完成（2026-08-14）：位置追踪 + 传感器（电量/续航/空调/车门）+ 空调开/关按钮。
 > token 实测服务端不严格校验（JWT exp 过期仍 200，三个历史 X-COP 均有效），一次配置可长期使用；若过期重新抓取即可（见 REVERSE_NOTES）。
@@ -84,7 +84,7 @@ python svw_client.py
 ### 安装
 
 ```powershell
-# 将 custom_components/svw_tracker/ 复制到 HA 的 custom_components/ 下
+# 将 custom_components/id3_tracker/ 复制到 HA 的 custom_components/ 下
 Copy-Item -Recurse custom_components\svw_tracker <ha_config>/custom_components/
 ```
 
@@ -94,7 +94,7 @@ Copy-Item -Recurse custom_components\svw_tracker <ha_config>/custom_components/
 
 ```yaml
 device_tracker:
-  - platform: svw_tracker
+  - platform: id3_tracker
     name: "ID.3"                              # 可选，默认 SVW ID.3
     user_id: "2166661271071268864"
     vin: "LSVFB6E93P2082137"
@@ -110,11 +110,12 @@ device_tracker:
 
 | 实体 | 类型 | 说明 |
 | --- | --- | --- |
-| `device_tracker.svw_id3_location` | 位置 | GPS 经纬度 |
-| `sensor.svw_id3_电量` | 电量 % | 含续航/充电状态 |
-| `sensor.svw_id3_空调` | 状态 | on/off + 剩余时间 |
-| `sensor.svw_id3_车门` | 状态 | safe + 车门/车窗明细 |
-| `button.svw_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+| `device_tracker.id3_id3_location` | 位置 | GPS 经纬度 |
+| `sensor.id3_id3_电量` | 电量 % | 含续航/充电状态 |
+| `sensor.id3_id3_空调` | 状态 | on/off + 剩余时间 |
+| `sensor.id3_id3_车门` | 状态 | safe + 车门/车窗明细 |
+| `button.id3_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+
 
 
 

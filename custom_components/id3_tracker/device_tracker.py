@@ -1,4 +1,4 @@
-﻿"""SVW (SAIC-Volkswagen ID.3) device_tracker / sensor / button platform."""
+﻿"""VW ID.3 (上汽大众) device_tracker / sensor / button platform."""
 from __future__ import annotations
 
 import logging
@@ -18,7 +18,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_NAME
 import homeassistant.helpers.config_validation as cv
 
-from .client import SVWMosClient, SVWError
+from .client import ID3Client, ID3Error
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,14 +32,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required("cop_token"): cv.string,
         vol.Required("device_id", default="vwa0a1b298a1598603"): cv.string,
         vol.Required("did", default=""): cv.string,
-        vol.Optional(CONF_NAME, default="SVW ID.3"): cv.string,
+        vol.Optional(CONF_NAME, default="VW ID.3"): cv.string,
     }
 )
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up SVW tracker platform."""
-    client = SVWMosClient(
+    """Set up ID.3 tracker platform."""
+    client = ID3Client(
         user_id=config["user_id"],
         vin=config["vin"],
         auth_jwt=config["auth_jwt"],
@@ -47,31 +47,31 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         device_id=config["device_id"],
         did=config.get("did", ""),
     )
-    coordinator = SVWCoordinator(client, scan_seconds=int(SCAN_INTERVAL.total_seconds()))
+    coordinator = ID3Coordinator(client, scan_seconds=int(SCAN_INTERVAL.total_seconds()))
     try:
         coordinator.refresh()
-    except SVWError:
-        _LOGGER.exception("SVW 首次拉取车况失败，请检查 token 与网络（token 2 小时过期）")
+    except ID3Error:
+        _LOGGER.exception("ID3 首次拉取车况失败，请检查 token 与网络（token 2 小时过期）")
         return False
 
-    name = config.get(CONF_NAME, "SVW ID.3")
+    name = config.get(CONF_NAME, "VW ID.3")
     add_entities(
         [
-            SVWLocationTracker(coordinator, name),
-            SVWChargeSensor(coordinator, name),
-            SVWClimateSensor(coordinator, name),
-            SVWDoorsSensor(coordinator, name),
-            SVWACStartButton(coordinator, name),
-            SVWACStopButton(coordinator, name),
+            ID3LocationTracker(coordinator, name),
+            ID3ChargeSensor(coordinator, name),
+            ID3ClimateSensor(coordinator, name),
+            ID3DoorsSensor(coordinator, name),
+            ID3ACStartButton(coordinator, name),
+            ID3ACStopButton(coordinator, name),
         ],
         True,
     )
 
 
-class SVWCoordinator:
+class ID3Coordinator:
     """Shared poller caching full vehicle state."""
 
-    def __init__(self, client: SVWMosClient, scan_seconds: int) -> None:
+    def __init__(self, client: ID3Client, scan_seconds: int) -> None:
         self.client = client
         self.scan_seconds = scan_seconds
         self._lock = threading.Lock()
@@ -94,13 +94,13 @@ def _f(value, default=None):
         return default
 
 
-class SVWLocationTracker(DeviceTrackerEntity):
+class ID3LocationTracker(DeviceTrackerEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         self._coordinator = coordinator
         self._attr_name = name
-        self._attr_unique_id = f"svw_{name}_location"
+        self._attr_unique_id = f"id3_{name}_location"
 
     @property
     def source_type(self) -> SourceType:
@@ -125,13 +125,13 @@ class SVWLocationTracker(DeviceTrackerEntity):
         self._coordinator.refresh()
 
 
-class SVWChargeSensor(SensorEntity):
+class ID3ChargeSensor(SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         self._coordinator = coordinator
         self._attr_name = f"{name} 电量"
-        self._attr_unique_id = f"svw_{name}_soc"
+        self._attr_unique_id = f"id3_{name}_soc"
         self._attr_unit_of_measurement = "%"
 
     @property
@@ -156,13 +156,13 @@ class SVWChargeSensor(SensorEntity):
         self._coordinator.refresh()
 
 
-class SVWClimateSensor(SensorEntity):
+class ID3ClimateSensor(SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         self._coordinator = coordinator
         self._attr_name = f"{name} 空调"
-        self._attr_unique_id = f"svw_{name}_climate"
+        self._attr_unique_id = f"id3_{name}_climate"
 
     @property
     def native_value(self):
@@ -183,13 +183,13 @@ class SVWClimateSensor(SensorEntity):
         self._coordinator.refresh()
 
 
-class SVWDoorsSensor(SensorEntity):
+class ID3DoorsSensor(SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         self._coordinator = coordinator
         self._attr_name = f"{name} 车门"
-        self._attr_unique_id = f"svw_{name}_doors"
+        self._attr_unique_id = f"id3_{name}_doors"
 
     @property
     def native_value(self):
@@ -213,13 +213,13 @@ class SVWDoorsSensor(SensorEntity):
         self._coordinator.refresh()
 
 
-class _SVWACButton(ButtonEntity):
+class _ID3ACButton(ButtonEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SVWCoordinator, name: str, action: str) -> None:
+    def __init__(self, coordinator: ID3Coordinator, name: str, action: str) -> None:
         self._coordinator = coordinator
         self._attr_name = f"{name} 空调{'开' if action == 'start' else '关'}"
-        self._attr_unique_id = f"svw_{name}_ac_{action}"
+        self._attr_unique_id = f"id3_{name}_ac_{action}"
         self._action = action
 
     async def async_press(self) -> None:
@@ -230,16 +230,19 @@ class _SVWACButton(ButtonEntity):
 
         try:
             await self.hass.async_add_executor_job(do)
-            _LOGGER.info("SVW AC %s command sent", self._action)
-        except SVWError:
-            _LOGGER.exception("SVW AC %s failed", self._action)
+            _LOGGER.info("ID3 AC %s command sent", self._action)
+        except ID3Error:
+            _LOGGER.exception("ID3 AC %s failed", self._action)
 
 
-class SVWACStartButton(_SVWACButton):
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+class ID3ACStartButton(_ID3ACButton):
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         super().__init__(coordinator, name, "start")
 
 
-class SVWACStopButton(_SVWACButton):
-    def __init__(self, coordinator: SVWCoordinator, name: str) -> None:
+class ID3ACStopButton(_ID3ACButton):
+    def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         super().__init__(coordinator, name, "stop")
+
+
+

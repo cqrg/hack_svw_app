@@ -1,6 +1,6 @@
 ﻿{
-  "domain": "svw_tracker",
-  "name": "SVW (SAIC-Volkswagen ID) Tracker",
+  "domain": "id3_tracker",
+  "name": "VW ID.3 (上汽大众 ID.3) Tracker",
   "codeowners": ["@cqrg"],
   "config_flow": false,
   "dependencies": [],
@@ -9,3 +9,4 @@
   "requirements": ["requests"],
   "version": "0.2.0"
 }
+
