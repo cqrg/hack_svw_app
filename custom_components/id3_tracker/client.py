@@ -94,3 +94,45 @@ class ID3Client:
     def climatisation_stop(self):
         return self._check(self._post(f"/mos/rcs/api/v1/users/{self.user_id}/vehicles/{self.vin}/climatisation/actions/stop", {}))
 
+
+
+    # ---- 账号密码自动登录（2026-08-16 实测）----
+    def login_with_password(self, username: str, password: str, did: str) -> dict:
+        """pwdlogin -> idToken；再尝试 /app/token 兑换 accessToken。
+        注意：/app/token 服务端对非 App 客户端返回 500025（实测），
+        若失败请用 token 模式（access_token 配置）或 App 登录后填 accessToken。"""
+        ts = int(time.time() * 1000)
+        base = {
+            "NOT_NEED_TOKEN": "NOT_NEED_TOKEN",
+            "Content-Type": "application/json; charset=UTF-8",
+            "Accept": "application/json; charset=UTF-8", "Accept-Language": "zh",
+            "X-Brand": "VW", "OS": "Android", "Did": did, "deviceId": self.device_id,
+            "Timestamp": str(ts), "Nonce": str(uuid.uuid4()),
+            "TraceId": f"{uuid.uuid4()}_sc_{did}_{ts}", "User-Agent": "okhttp/4.12.0",
+        }
+        r = requests.post(
+            BASE + "/mos/security/api/v1/app/actions/pwdlogin",
+            json={"brand": "vw", "deviceId": did, "deviceType": "android",
+                  "mobile": username, "picContent": "", "picTicket": "",
+                  "pwd": password, "scope": "openid"},
+            headers=base, timeout=20)
+        data = r.json().get("data", {})
+        idtoken = data.get("idToken")
+        if not idtoken:
+            return {"ok": False, "error": r.json().get("description")}
+        # 尝试兑换 accessToken
+        h = dict(base)
+        h["Authorization"] = "Bearer"
+        h["X-COP-accessToken"] = ""
+        r2 = requests.post(
+            BASE + "/mos/security/api/v1/app/token",
+            json={"consentTypeList": "app_privacy,app_agreement", "idToken": idtoken},
+            headers=h, timeout=20)
+        j2 = r2.json()
+        if j2.get("code") == "000000":
+            d2 = j2["data"]
+            self.auth_jwt = "Bearer " + d2["accessToken"]
+            return {"ok": True, "accessToken": d2["accessToken"],
+                    "refreshToken": d2.get("refreshToken"), "expireIn": d2.get("expireIn")}
+        return {"ok": False, "error": f"/app/token {j2.get('code')} {j2.get('description')}（服务端限制，需 token 模式）",
+                "idTokenAT": data.get("idTokenAT"), "idTokenRT": data.get("idTokenRT")}

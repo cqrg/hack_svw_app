@@ -47,6 +47,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         device_id=config["device_id"],
         did=config.get("did", ""),
     )
+    # 账号密码模式：尝试自动登录（pwdlogin；/app/token 受限时降级提示）
+    if config.get("username") and config.get("password") and not config.get("auth_jwt"):
+        login = client.login_with_password(config["username"], config["password"], config.get("did", ""))
+        if login.get("ok"):
+            _LOGGER.info("ID3 账号密码自动登录成功")
+        else:
+            _LOGGER.warning("ID3 账号密码登录受限：%s（请改用 token 模式，在 App 登录一次后填 auth_jwt）", login.get("error"))
+            return False
     coordinator = ID3Coordinator(client, scan_seconds=int(SCAN_INTERVAL.total_seconds()))
     try:
         coordinator.refresh()
@@ -243,6 +251,7 @@ class ID3ACStartButton(_ID3ACButton):
 class ID3ACStopButton(_ID3ACButton):
     def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         super().__init__(coordinator, name, "stop")
+
 
 
 

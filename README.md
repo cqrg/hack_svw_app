@@ -90,7 +90,7 @@ Copy-Item -Recurse custom_components\svw_tracker <ha_config>/custom_components/
 
 ### 配置（configuration.yaml）
 
-**可直接粘贴（2026-08-14 实测有效）**：
+**方式 A：token 模式（推荐，一次配置长期可用）**——在 App 登录一次，从 REVERSE_NOTES 或抓包拿 auth_jwt：
 
 ```yaml
 device_tracker:
@@ -115,6 +115,7 @@ device_tracker:
 | `sensor.id3_id3_空调` | 状态 | on/off + 剩余时间 |
 | `sensor.id3_id3_车门` | 状态 | safe + 车门/车窗明细 |
 | `button.id3_id3_空调开` / `空调关` | 按钮 | 远程空调开/关 |
+
 
 
 

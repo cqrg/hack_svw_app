@@ -364,3 +364,21 @@ python tools/vw_crypto_oracle.py
 
 **对 HA 集成**：token 一次配置即可长期使用；即使将来真过期，重新登录/抓一次即可。HA 客户端无需复杂自动刷新逻辑。
 
+
+
+## HA 集成自动化登录调研（2026-08-16）
+
+**需求**：HA 填账号密码自动拿 token / 自动续期，不手动抓包。
+
+**已确认（Python 可调）**：
+- `POST /mos/security/api/v1/app/actions/pwdlogin`（账号 bf30c486a87c47f8 + 密码，设备已信任免验证码）→ 返回 `idToken`（idp JWT RS256）+ `idTokenAT`/`idTokenRT` + userId。
+- `accessToken`（mos ES256 JWT）直接作 `Authorization: Bearer <accessToken>` 调车控 = **200 成功**（X-COP 非必需）。
+- `refreshToken` 13 天有效（JWT exp 差值 1123200s）。
+
+**卡点**：
+- 兑换接口 `POST /mos/security/api/v1/app/token`（body `{"consentTypeList":"app_privacy,app_agreement","idToken":<idp JWT>}`，headers 含 `NOT_NEED_TOKEN: NOT_NEED_TOKEN` + `Authorization: Bearer` 字面值 + 标准头）：
+  - App 内调用成功（返回 accessToken+refreshToken，id0-id==idToken jti）。
+  - **Python/requests/App 内 okhttp 复刻恒返回 `500025 系统异常`**——已排除 TLS 指纹（App 进程内 okhttp 同样 500025）、headers（完全一致）、did（pwdlogin 与 token 同 did）、来源 IP。判定为**服务端对客户端/时序/风控的严格校验**，纯 Python 自动化兑换不可行。
+- 因此 **HA 账号密码模式暂不可用**，只能 **token 模式**（accessToken 配置，长期有效 + 13 天 refreshToken；失效后 App 重新登录一次）。
+
+**结论**：HA 集成支持账号密码入口（pwdlogin 可自动），但兑换受限 → 实际用 token 模式。token 长期有效（服务端不严格校验 exp），一次配置可用较久。
