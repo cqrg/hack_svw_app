@@ -10,7 +10,8 @@ class ID3Error(Exception):
 
 
 class ID3Client:
-    def __init__(self, user_id, vin, auth_jwt, cop_token, device_id, did):
+    def __init__(self, user_id, vin, auth_jwt, cop_token="", device_id="", did=""):
+        """实测（2026-08-16）：车控只需 auth_jwt，did/device_id/cop_token 均可省略（空/伪造均 200）。"""
         self.user_id = user_id
         self.vin = vin
         self.auth_jwt = auth_jwt
@@ -23,18 +24,21 @@ class ID3Client:
         nonce = str(uuid.uuid4())
         h = {
             "Authorization": self.auth_jwt,
-            "X-COP-accessToken": self.cop_token,
             "X-Brand": "VW",
             "OS": "Android",
-            "Did": self.did,
-            "deviceId": self.device_id,
             "Timestamp": str(ts),
             "Nonce": nonce,
-            "TraceId": f"{uuid.uuid4()}_{self.user_id}_{self.did}_{ts}",
+            "TraceId": f"{uuid.uuid4()}_{self.user_id}_{self.did or 'DID'}_{ts}",
             "Accept-Language": "zh",
             "Accept": "application/json; charset=UTF-8",
             "User-Agent": "okhttp/4.12.0",
         }
+        if self.cop_token:
+            h["X-COP-accessToken"] = self.cop_token
+        if self.did:
+            h["Did"] = self.did
+        if self.device_id:
+            h["deviceId"] = self.device_id
         if content_type:
             h["Content-Type"] = "application/json; charset=UTF-8"
         return h
@@ -136,3 +140,4 @@ class ID3Client:
                     "refreshToken": d2.get("refreshToken"), "expireIn": d2.get("expireIn")}
         return {"ok": False, "error": f"/app/token {j2.get('code')} {j2.get('description')}（服务端限制，需 token 模式）",
                 "idTokenAT": data.get("idTokenAT"), "idTokenRT": data.get("idTokenRT")}
+

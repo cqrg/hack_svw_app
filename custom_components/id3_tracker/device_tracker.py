@@ -29,9 +29,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required("user_id"): cv.string,
         vol.Required("vin"): cv.string,
         vol.Required("auth_jwt"): cv.string,
-        vol.Required("cop_token"): cv.string,
-        vol.Required("device_id", default="vwa0a1b298a1598603"): cv.string,
-        vol.Required("did", default=""): cv.string,
+        vol.Optional("cop_token", default=""): cv.string,   # 可选：X-COP（实测非必需）
+        vol.Optional("device_id", default=""): cv.string,   # 可选：实测空/伪造均 200
+        vol.Optional("did", default=""): cv.string,          # 可选：实测空/伪造均 200
         vol.Optional(CONF_NAME, default="VW ID.3"): cv.string,
     }
 )
@@ -251,6 +251,8 @@ class ID3ACStartButton(_ID3ACButton):
 class ID3ACStopButton(_ID3ACButton):
     def __init__(self, coordinator: ID3Coordinator, name: str) -> None:
         super().__init__(coordinator, name, "stop")
+
+
 
 
 
