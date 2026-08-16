@@ -382,3 +382,24 @@ python tools/vw_crypto_oracle.py
 - 因此 **HA 账号密码模式暂不可用**，只能 **token 模式**（accessToken 配置，长期有效 + 13 天 refreshToken；失效后 App 重新登录一次）。
 
 **结论**：HA 集成支持账号密码入口（pwdlogin 可自动），但兑换受限 → 实际用 token 模式。token 长期有效（服务端不严格校验 exp），一次配置可用较久。
+
+
+## 复刻所需参数实测（2026-08-16 补充）
+
+**结论：复刻只需要 accessToken，did/device_id/cop_token 全部可省！**
+
+用有效 accessToken 逐一测试（charging/status 车控接口）：
+
+| 变体 | 结果 |
+| --- | --- |
+| 真实 did+device_id | 200 |
+| 伪造 did（随机 uuid） | 200 |
+| 伪造 device_id（随机 hex） | 200 |
+| 空 did | 200 |
+| 空 device_id | 200 |
+| 无 cop_token（X-COP） | 200 |
+
+- **cop_token（X-COP-accessToken）**：COP 平台令牌，App 登录/会话后下发、会刷新；但**车控接口完全不校验**，可忽略。
+- **did/device_id**：App 生成的设备标识，格式固定；服务端**不校验真实性**（空/伪造均可），可自造或省略。
+- **必需**：`Authorization: Bearer <accessToken>` + 标准头（Timestamp/Nonce/TraceId 每次动态生成）+ user_id/vin。
+- **唯一硬门槛**：accessToken 获取（App 登录 → /app/token 兑换，服务端只信任 App 客户端，外部 500025）→ 复刻者需 App 登录一次获取 accessToken。
